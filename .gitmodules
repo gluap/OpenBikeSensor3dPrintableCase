@@ -1,3 +1,6 @@
 [submodule "MainCase/VerticalCase_JSN-AJ/logo-case-generator/BOSL2"]
 	path = MainCase/VerticalCase_JSN-AJ/logo-case-generator/BOSL2
 	url = https://github.com/revarbat/BOSL2
+[submodule "MainCase/VerticalCase_JSN-AJ/logo-case-generator/tjw-scad"]
+	path = MainCase/VerticalCase_JSN-AJ/logo-case-generator/tjw-scad
+	url = https://github.com/teejaydub/tjw-scad
