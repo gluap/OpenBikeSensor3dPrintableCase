@@ -2,7 +2,7 @@
 
 1.) Init git submodules to get the required openscad packages
 
-``git submodule init``
+``git submodule init && git submodule update``
 
 2.) Open backrack-mount.scad and edit values to fit your backrack parameters (needs: diameter of tubes and distance of the two tubes obs should be mounted to. Measure with calipers).
 
