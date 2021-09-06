@@ -1,5 +1,10 @@
 # Generating backrack mount
 
+0.) Fetch this branch, if you do not have it yet:
+
+``git clone https://github.com/gluap/OpenBikeSensor3dPrintableCase.git --branch backrack_openscad``
+
+
 1.) Init git submodules to get the required openscad packages
 
 ``git submodule init && git submodule update``
