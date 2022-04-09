@@ -44,7 +44,6 @@ jobs:
       run: |
         mkdir export
         echo GITHUB Ref: ${{ github.ref }}
-        VERSION_STRING=`grep "const char \*OBSVersion =" src/OpenBikeSensorFirmware.cpp`
         MAJOR=`cat version.txt|cut -f2 `
         if [ "${{ github.ref }}" = "refs/heads/main" ]
         then
@@ -63,8 +62,6 @@ jobs:
         echo $VERSION > export/VERSION
         echo $VERSION > export/version.txt
         echo Building OBS Version: $VERSION
-        sed -i 's|-DBUILD_NUMBER=\\"-dev\\"|-DBUILD_NUMBER=\\"'${SEPARATOR}${PATCH}'\\"|' platformio.ini
-        echo "SONAR_SCANNER_VERSION=4.6.2.2472" >> $GITHUB_ENV
 
     - name: Install build dependencies
       run: |
