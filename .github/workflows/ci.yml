@@ -72,11 +72,12 @@ jobs:
     - name: Build case
       # xvfb-run required for thumbnails
       run: |
-         xvfb-run -a make -j OPENSCAD_OPTIONS="" all
+        make clean
+        xvfb-run -a make -j OPENSCAD_OPTIONS="" all
 
     - name: Package case
       run: |
-        zip --junk-paths obs-${{ env.OBS_VERSION }}.zip export
+        zip --junk-paths --recurse-paths obs-${{ env.OBS_VERSION }}.zip export render
 
     - name: Upload Build Asset
       uses: actions/upload-artifact@v2
