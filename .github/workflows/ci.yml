@@ -67,6 +67,7 @@ jobs:
       run: |
         apt-get update
         apt-get install -qq -y zip make fonts-open-sans
+        ln -s /usr/local/bin/openscad /usr/bin/openscad
 
     - name: Build firmware
       run: |
