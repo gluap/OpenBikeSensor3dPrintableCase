@@ -1,0 +1,149 @@
+#
+#  Copyright (C) 2019-2022 OpenBikeSensor Contributors
+#  Contact: https://openbikesensor.org
+#
+#  This file is part of the OpenBikeSensor 3D Printable case.
+#
+#  The OpenBikeSensor firmware is free software: you can redistribute it
+#  and/or modify it under the terms of the GNU Lesser General Public License as
+#  published by the Free Software Foundation, either version 3 of the License,
+#  or (at your option) any later version.
+#
+#  OpenBikeSensor firmware is distributed in the hope that it will be
+#  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+#  General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with the OpenBikeSensor firmware.  If not, see
+#  <http://www.gnu.org/licenses/>.
+#
+name: OpenBikeSensor - CI
+on:
+  # Trigger when pushing in master or pull requests, and when creating
+  # a pull request.
+  push:
+    branches:
+      - main
+      - beta
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+    # could use a container with sq tools already installed
+       image: openscad/openscad:latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Prepare source
+      run: |
+        mkdir export
+        echo GITHUB Ref: ${{ github.ref }}
+        VERSION_STRING=`grep "const char \*OBSVersion =" src/OpenBikeSensorFirmware.cpp`
+        MAJOR=`cat version.txt|cut -f2 `
+        if [ "${{ github.ref }}" = "refs/heads/main" ]
+        then
+          PATCH=${GITHUB_RUN_NUMBER}
+          SEPARATOR=.
+          PREPARE_RELEASE=true
+        else
+          PATCH=RC${GITHUB_RUN_NUMBER}
+          SEPARATOR=-
+          PREPARE_RELEASE=false
+        fi
+        VERSION=${MAJOR}${SEPARATOR}${PATCH}
+        echo "OBS_PREPARE_RELEASE=${PREPARE_RELEASE}" >> $GITHUB_ENV
+        echo "OBS_VERSION=${VERSION}" >> $GITHUB_ENV
+        echo "OBS_MAJOR_VERSION=${MAJOR}" >> $GITHUB_ENV
+        echo $VERSION > export/VERSION
+        echo $VERSION > export/version.txt
+        echo Building OBS Version: $VERSION
+        sed -i 's|-DBUILD_NUMBER=\\"-dev\\"|-DBUILD_NUMBER=\\"'${SEPARATOR}${PATCH}'\\"|' platformio.ini
+        echo "SONAR_SCANNER_VERSION=4.6.2.2472" >> $GITHUB_ENV
+
+    - name: Install build dependencies
+      run: |
+        apt-get update
+        apt-get install -qq -y zip make fonts-open-sans
+
+    - name: Build firmware
+      run: |
+         make
+
+    - name: Package firmware
+      run: |
+        zip --junk-paths obs-${{ env.OBS_VERSION }}.zip export
+
+    - name: Upload Build Asset
+      uses: actions/upload-artifact@v2
+      with:
+        name: obs-${{ env.OBS_VERSION }}
+        path: |
+          export/MainCase/MainCase.stl
+        if-no-files-found: error
+
+    - name: Upload Build Asset Initial Flash
+      uses: actions/upload-artifact@v2
+      with:
+        name: obs-${{ env.OBS_VERSION }}-initial-flash
+        path: |
+          0x*.bin
+          COPYRIGHT-ESP.html
+          LICENSE-ARDUINO-ESP32.md
+          LICENSE-OpenSans.txt
+          LICENSE
+        if-no-files-found: error
+
+    - name: Generate changelog
+      id: changelog
+      if: ${{ env.OBS_PREPARE_RELEASE == 'true' }}
+      uses: metcalfc/changelog-generator@v3.0.0
+      with:
+        myToken: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Release
+      id: create_release
+      if: ${{ env.OBS_PREPARE_RELEASE == 'true' }}
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.OBS_VERSION }}
+        release_name: ${{ env.OBS_VERSION }}
+        body: |
+          ![GitHub downloads](https://img.shields.io/github/downloads-pre/openbikesensor/OpenBikeSensorFirmware/${{ env.OBS_VERSION }}/total) ![GitHub commits since release](https://img.shields.io/github/commits-since/openbikesensor/OpenBikeSensorFirmware/${{ github.sha }}?label=commits%20since%20${{ env.OBS_VERSION }})
+
+          Version ${{ env.OBS_VERSION }} based on ${{ github.ref }} ${{ github.sha }}
+
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## :tada: Major features and improvements
+
+          ## :rocket: New features and improvements 
+
+          ## :bug: Bug Fixes
+
+          ## :ghost: Maintenance
+
+          ## :package: Dependency updates
+
+          ## :construction_worker: Changes for developers / internal
+        draft: true
+        prerelease: true
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      if: ${{ env.OBS_PREPARE_RELEASE == 'true' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./obs-${{ env.OBS_VERSION }}.zip
+        asset_name: obs-${{ env.OBS_VERSION }}.zip
+        asset_content_type: application/zip
