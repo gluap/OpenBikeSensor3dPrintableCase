@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
     # could use a container with sq tools already installed
-       image: openscad/openscad:latest
+       image: python:3.9
     steps:
     - uses: actions/checkout@v3
       with:
@@ -66,7 +66,7 @@ jobs:
     - name: Install build dependencies
       run: |
         apt-get update
-        apt-get install -qq -y zip make fonts-open-sans python3
+        apt-get install -qq -y zip make fonts-open-sans openscad
         ln -s /usr/local/bin/openscad /usr/bin/openscad
 
     - name: Build case
