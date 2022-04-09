@@ -69,11 +69,11 @@ jobs:
         apt-get install -qq -y zip make fonts-open-sans python3
         ln -s /usr/local/bin/openscad /usr/bin/openscad
 
-    - name: Build firmware
+    - name: Build case
       run: |
-         make
+         make -j OPENSCAD_OPTIONS=""
 
-    - name: Package firmware
+    - name: Package case
       run: |
         zip --junk-paths obs-${{ env.OBS_VERSION }}.zip export
 
@@ -85,17 +85,6 @@ jobs:
           export/MainCase/MainCase.stl
         if-no-files-found: error
 
-    - name: Upload Build Asset Initial Flash
-      uses: actions/upload-artifact@v2
-      with:
-        name: obs-${{ env.OBS_VERSION }}-initial-flash
-        path: |
-          0x*.bin
-          COPYRIGHT-ESP.html
-          LICENSE-ARDUINO-ESP32.md
-          LICENSE-OpenSans.txt
-          LICENSE
-        if-no-files-found: error
 
     - name: Generate changelog
       id: changelog
