@@ -67,11 +67,12 @@ jobs:
     - name: Install build dependencies
       run: |
         apt-get update
-        apt-get install -qq -y zip make fonts-open-sans openscad
+        apt-get install -qq -y zip make fonts-open-sans openscad xvfb
 
     - name: Build case
+      # xvfb-run required for thumbnails
       run: |
-         make -j OPENSCAD_OPTIONS="" all
+         xvfb-run -a make -j OPENSCAD_OPTIONS="" all
 
     - name: Package case
       run: |
