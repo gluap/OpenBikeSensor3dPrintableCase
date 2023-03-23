@@ -1,5 +1,7 @@
 use <../../lib/Round-Anything/polyround.scad>
 
+use <../Mounting/StandardMountAdapter.scad>
+
 
 corner_x = 24;
 boardcorner_x = 17;
@@ -19,7 +21,7 @@ Lite_PCB_Dimensions = [Lite_PCB_x, Lite_PCB_y, Lite_PCB_z];
 
 Lite_ESP_socket_x = 38;
 Lite_ESP_socket_y = 2.54;
-Lite_ESP_socket_z = 9;
+Lite_ESP_socket_z = 9 + Lite_PCB_z + 1.8;
 Lite_ESP_socket_dimensions = [Lite_ESP_socket_x, Lite_ESP_socket_y, Lite_ESP_socket_z];
 
 Lite_transducer_position = [23.8, 0, 20.1];
@@ -44,7 +46,7 @@ sensor_y = Lite_transducer_position[0];
 
 function angle_three_points_2d(pa, pb, pc) = asin(cross(pb - pa, pb - pc) / (norm(pb - pa) * norm(pb - pc)));
 
-module side_polygon() {
+module SidePolygon() {
   corners = [
       [square_x, - lite_w / 2, 9],
     // chose radius so the corners match
@@ -56,28 +58,32 @@ module side_polygon() {
   translate([sensor_x, sensor_y])polygon(polyRound(corners, fn = 150));
 }
 
-module LidCutter() {
-  translate([30, 0, Lite_ESP_position_z+1])cube([80, 40, 0.1], center = true);
-}
-module middle_polygon() {
+
+module MidPolygon() {
   corners = [[square_x, - lite_w / 2, 5], [- boardcorner_x, - boardcorner_y, 5], [- boardcorner_x, boardcorner_y, 5], [square_x, lite_w / 2, 5], [lite_l, lite_w / 2, 5], [lite_l, -
   lite_w / 2, 5]];
   translate([sensor_x, sensor_y]) polygon(polyRound(corners));
 }
 
-module box_outside()
-hull() {
-  for (i=[-1,1]){
-  translate([0, 0, i*9 - (i+1)/2])linear_extrude(1)middle_polygon();
-  translate([0, 0, i*18 - (i+1)/2])linear_extrude(1)side_polygon();
+module LidCutter() {
+  translate([30, 0, Lite_ESP_position_z + 0.8])cube([90, 60, 0.1], center = true);
 }
+
+module Box() {
+  hull() {
+    for (i = [- 1, 1]) {
+      translate([0, 0, i * 9 - (i + 1) / 2])linear_extrude(1)MidPolygon();
+      translate([0, 0, i * 18 - (i + 1) / 2])linear_extrude(1)SidePolygon();
+    }
+
+  }
 }
 
 module ESP() {
   difference() {
-    color("black")translate([25, 0, 0])cube([51.5, 28.5, 4.5], center = true);
+    color("black")translate([25.3, 0, 0.2])cube([52.1, 29, 4.8], center = true);
     for (i = [- 1, 1])for (j = [- 1, 1]) {
-      #translate([i*24+23, j * 12.5-2.5, -4.3])cube([4,5,5]);
+      translate([i * 24 + 23, j * 12.5 - 2.5, - 4.7])cube([4, 5, 5]);
     }
   }
 }
@@ -106,18 +112,32 @@ module USB_hole() {
   translate(Lite_USB)cube([20, 12, 10], center = true);
 }
 
+module Screwbump(size = 6, hole_diameter = 3.0, height = 6, bottom = true, toppart = 2.1) {
+  outer_polygon = [[size, 0, 0], [- size, 0, 0], [- size, size, size], [0, 3 * size, size], [size, size, size]];
+  difference() {
+    hull() {
+      translate([0, 0, 0])polyRoundExtrude(outer_polygon, 1, 0, 0);
+
+      translate([0, 0, height - 1])polyRoundExtrude(outer_polygon, 1, 0, 0);
+      if (bottom)translate([0, - 0.01, 1.3 * height])rotate([90, 0, 0])cylinder(d = size, h = 0.1);
+    }
+    translate([0, size, 0])cylinder(d = hole_diameter, h = height);
+    translate([0, size, - .01])cylinder(d = hole_diameter + 0.2, h = toppart);
+  }
+}
+
 
 module LiteElectronics(onlyboards = false) {
   // the rendered model from stls (not closed, only for preview)
-  if (!$preview) translate([15, 0, 0])rotate([180, 00, 00])rotate([0, 0, 90])import("../../lib/OpenBikeSensor-Lite-PCB-0.1.2.stl");
+  //if (!$preview) translate([15, 0, 0])rotate([180, 00, 00])rotate([0, 0, 90])import("../../lib/OpenBikeSensor-Lite-PCB-0.1.2.stl");
 
   // board cube
   color("green")translate(- [0, Lite_PCB_y / 2, Lite_PCB_z])cube(Lite_PCB_Dimensions, center = false);
-  color("green")translate(- [0.2, Lite_PCB_y / 2 + 0.2, Lite_PCB_z + 15])cube(Lite_PCB_Dimensions + [0.4, 0.4, 15], center = false);
+  color("green")translate(- [0.2, Lite_PCB_y / 2 + 0.2, Lite_PCB_z + 13])cube(Lite_PCB_Dimensions + [0.4, 0.4, 13], center = false);
 
 
   // sockets for ESP
-  for (i = [- 1, 1]) color("darkgrey")translate([3.5, i * Lite_PCB_y / 2 - (i + 1) * Lite_ESP_socket_y / 2 - i * 0.45, - Lite_ESP_socket_dimensions[2] - Lite_PCB_Dimensions[2]])
+  for (i = [- 1, 1]) color("darkgrey")translate([3.5, i * Lite_PCB_y / 2 - (i + 1) * Lite_ESP_socket_y / 2 - i * 0.45, - Lite_ESP_socket_dimensions[2] + 1.8])
     cube(Lite_ESP_socket_dimensions);
 
   translate(Lite_ESP_position)ESP();
@@ -125,29 +145,22 @@ module LiteElectronics(onlyboards = false) {
   for (i = [- 1, 1])Ultrasonic(i, onlyboards = onlyboards, h = 50);
   USB_hole();
 }
-//LiteElectronics();
-/*
-intersection() {translate([- 5, - 17.5, 0])cube([80, 17.5 * 2, 50]);
-  difference() {
-    //rotate([90,90,0])box_outside();
 
-    minkowski() {sphere(0.8);intersection() {
-      translate([- 5, - 17.5, 0])cube([80, 17.5 * 2, 50]);
-      for (i = [- 1, 1])Ultrasonic(i);}
-    }
-    intersection() {
-      translate([- 5, - 30, 0])cube([80, 50, 50]);
-      for (i = [- 1, 1])Ultrasonic(i);}
-    for (i = [- 1, 1])translate(Lite_transducer_position - [0, 8 * i, 0])rotate([i * 90, 0, 0])cylinder(d = Lite_transducer_diameter_small, h = 40, $fn = 100);
-
-  }
-
-}
-*/
 difference() {
-  rotate([90, 90, 0])box_outside();
+  union() {
+    translate([- 7, 0, Lite_ESP_position_z + 0.8 + 0.05 - 2])rotate([0, 0, 90])Screwbump(size = 3.5, hole_diameter = 3, height = 9, bottom = true);
+    translate([lite_w - 7.3, 12, Lite_ESP_position_z + 0.8 + 0.05 - 2])rotate([0, 0, - 90])Screwbump(size = 3.5, hole_diameter = 3, height = 9, bottom = true);
+    translate([lite_w - 7.3, - 12, Lite_ESP_position_z + 0.8 + 0.05 - 2])rotate([0, 0, - 90])Screwbump(size = 3.5, hole_diameter = 3, height = 9, bottom = true);
+    translate([23.8, - 3.5, - 17.9])rotate([180, 0, 90])StandardMountAdapter(screwholes = false, channels = false);
+    difference() {
+      rotate([90, 90, 0])Box();
+      #hull()    translate([23.8, - 3.5, - 18])rotate([180, 0, 90])StandardMountAdapter(screwholes = false, channels = false);
+
+    }
+  }
   LiteElectronics();
   LidCutter();
 }
 
-if (!onlyboards) translate([15, 0, 0])rotate([180, 00, 00])rotate([0, 0, 90])import("../../lib/OpenBikeSensor-Lite-PCB-0.1.2.stl");
+//if (!onlyboards) translate([15, 0, 0])rotate([180, 00, 00])rotate([0, 0, 90])import("../../lib/OpenBikeSensor-Lite-PCB-0.1.2.stl");
+
